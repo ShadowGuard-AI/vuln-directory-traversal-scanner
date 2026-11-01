@@ -36,6 +36,9 @@ def build_test_url(url, param_name, payload):
     parameters, is never rewritten, whatever the original value was.
     """
     parsed = urllib.parse.urlparse(url)
+    # parse_qsl plus urlencode below rebuilds the whole query, so the other
+    # parameters come back re-encoded. Their values survive; their exact
+    # original spelling, like a plus for a space, may not.
     pairs = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
     new_pairs = [(k, payload if k == param_name else v) for k, v in pairs]
     return urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(new_pairs)))
@@ -56,6 +59,9 @@ def test_directory_traversal(url, parameter=None, depth=3):
     traversal_sequences = ["../" * i for i in range(1, depth + 1)]
 
     parsed_url = urllib.parse.urlparse(url)
+    # parse_qs drops blank values by default, so a parameter written as
+    # ?page= with nothing after the equals is invisible here. It counts as
+    # no parameter, and naming it with -p reports it as not found.
     query_params = urllib.parse.parse_qs(parsed_url.query)
 
     if not query_params:
@@ -111,11 +117,16 @@ def test_file_upload_traversal(url, file_path, depth=3):
     try:
         payload_text = payload_bytes.decode("utf-8")
     except UnicodeDecodeError:
+        # A binary upload can still pass on a 201 below, but the read back
+        # check needs text to search for, so a binary file gets only half
+        # of the two proofs this function can offer.
         payload_text = None
 
     traversal_sequences = ["../" * i for i in range(1, depth + 1)]
     filename = os.path.basename(file_path)
     parsed = urllib.parse.urlparse(url)
+    # posixpath, not os.path, on purpose: this path lives in a URL, so it
+    # uses forward slashes no matter what system I run the scanner on.
     upload_dir = posixpath.dirname(parsed.path)
 
     sent = 0
