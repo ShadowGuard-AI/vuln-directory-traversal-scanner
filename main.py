@@ -58,11 +58,14 @@ def test_directory_traversal(url, parameter=None, depth=3):
     failed = 0
     traversal_sequences = ["../" * i for i in range(1, depth + 1)]
 
+    if depth < 1:
+        return vulnerable_urls, 0, 0, "traversal depth must be at least 1"
+
     parsed_url = urllib.parse.urlparse(url)
-    # parse_qs drops blank values by default, so a parameter written as
-    # ?page= with nothing after the equals is invisible here. It counts as
-    # no parameter, and naming it with -p reports it as not found.
-    query_params = urllib.parse.parse_qs(parsed_url.query)
+    # keep_blank_values=True so a parameter written as ?page= with
+    # nothing after the equals is still tested instead of being
+    # silently dropped by parse_qs.
+    query_params = urllib.parse.parse_qs(parsed_url.query, keep_blank_values=True)
 
     if not query_params:
         return vulnerable_urls, 0, 0, "the URL has no query parameters to test"
@@ -185,6 +188,10 @@ def main():
     result = urllib.parse.urlparse(args.url)
     if not all([result.scheme, result.netloc]):
         logging.error("Invalid URL: a full URL with scheme and host is required.")
+        sys.exit(1)
+
+    if args.depth < 1:
+        logging.error("Invalid traversal depth: depth must be at least 1.")
         sys.exit(1)
 
     # Validate file upload path (if provided)

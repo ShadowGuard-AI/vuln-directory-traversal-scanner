@@ -22,4 +22,4 @@ Example: `python main.py "http://127.0.0.1:8080/page?file=test.txt"`
 - `-o`: Output file to save results to.
 
 ## License
-Copyright (c) ShadowGuard-AI
+MIT License (see the LICENSE file).
